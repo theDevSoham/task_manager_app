@@ -97,7 +97,7 @@ router.post("/signup", async (req: Request, res: Response) => {
       },
     });
 
-    console.log(`OTP for ${email}: ${otp}`);
+    // console.log(`OTP for ${email}: ${otp}`);
     const subject = "Your OTP Code";
     const html = `
     <p>Hello,</p>
