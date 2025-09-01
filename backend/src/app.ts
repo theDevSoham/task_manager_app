@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import { config } from "dotenv";
 import authRoutes from "./routes/auth.routes";
-// import taskRoutes from "./routes/task.routes";
+import taskRoutes from "./routes/task.routes";
 
 config();
 
@@ -15,6 +15,6 @@ app.get("/health", (req: Request, res: Response) => {
 });
 
 app.use("/auth", authRoutes);
-// app.use("/tasks", taskRoutes);
+app.use("/tasks", taskRoutes);
 
 export default app;
