@@ -10,12 +10,18 @@ const axiosClient = axios.create({
   },
 });
 
-export async function fetchTasks(token: string) {
+export async function fetchTasks(
+  token: string,
+  page = 1,
+  limit = 10,
+  search = ""
+) {
   return (
     await axiosClient.get(`/all`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      params: { page, limit, search },
     })
   ).data;
 }

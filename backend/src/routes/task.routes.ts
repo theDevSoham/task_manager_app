@@ -6,6 +6,7 @@ import multer from "multer";
 import { sendResponse } from "../utils/response";
 import { CustomRequest } from "../utils/types/customRequest";
 import { authMiddleware } from "../middleware/auth.middleware";
+import { Prisma } from "@prisma/client";
 
 // File upload config for bulk tasks
 const upload = multer({ storage: multer.memoryStorage() });
@@ -99,18 +100,65 @@ router.post(
   }
 );
 
-// Get all tasks for the logged-in user
+// Get all tasks for the logged-in user with pagination & search
 router.get(
   "/all",
   authMiddleware,
   async (req: CustomRequest, res: Response) => {
     try {
-      const tasks = await prisma.task.findMany({
-        where: { userId: req.user!.id },
-        orderBy: { createdAt: "desc" },
-      });
+      const { page = "1", limit = "10", search = "" } = req.query;
 
-      return sendResponse(res, 200, true, "Tasks fetched successfully", tasks);
+      const pageNumber = parseInt(page as string, 10);
+      const limitNumber = parseInt(limit as string, 10);
+      const skip = (pageNumber - 1) * limitNumber;
+
+      const searchFilter =
+        search && search !== ""
+          ? {
+              OR: [
+                {
+                  title: {
+                    contains: search as string,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+                {
+                  description: {
+                    contains: search as string,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+              ],
+            }
+          : {};
+
+      const [tasks, total] = await Promise.all([
+        prisma.task.findMany({
+          where: {
+            userId: req.user!.id,
+            ...searchFilter,
+          },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limitNumber,
+        }),
+        prisma.task.count({
+          where: {
+            userId: req.user!.id,
+            ...searchFilter,
+          },
+        }),
+      ]);
+
+      return sendResponse(res, 200, true, "Tasks fetched successfully", {
+        tasks,
+        pagination: {
+          total,
+          page: pageNumber,
+          limit: limitNumber,
+          totalPages: Math.ceil(total / limitNumber),
+        },
+      });
     } catch (err) {
       console.error("Fetch tasks error:", err);
       return sendResponse(res, 500, false, "Internal server error");

@@ -20,6 +20,7 @@ import { motion } from "framer-motion";
 import type { Task } from "@/types/types";
 import TaskModal from "./TaskModal";
 import { useAuth } from "@/hooks/useAuth";
+import { PaginationComponent } from "./TablePaginattion";
 
 interface TaskTableProps {
   tasks: Task[];
@@ -29,6 +30,11 @@ interface TaskTableProps {
   onBulkTaskSubmit?: (file: File) => void;
   onDeleteTask?: (taskId: number) => void;
   onExportRequest?: () => void;
+  pagination: {
+    page: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+  };
 }
 
 export const TaskTable = ({
@@ -39,6 +45,7 @@ export const TaskTable = ({
   onBulkTaskSubmit,
   onDeleteTask,
   onExportRequest,
+  pagination,
 }: TaskTableProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "bulk">("add");
@@ -208,6 +215,11 @@ export const TaskTable = ({
                 ))}
               </TableBody>
             </Table>
+            <PaginationComponent
+              currentPage={pagination.page}
+              totalPages={pagination.totalPages}
+              onPageChange={(p) => pagination.onPageChange(p)}
+            />
           </div>
         )}
       </div>

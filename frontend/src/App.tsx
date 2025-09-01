@@ -23,16 +23,22 @@ const App = () => {
     taskId: "",
   });
 
+  // pagination state
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+
   useEffect(() => {
     if (!token) return;
     setLoading(true);
     fetchTasks(token)
       .then((res) => {
-        setTasks(res.data as Task[]);
+        setTasks(res.data.tasks as Task[]);
+        setTotalPages(res.data.pagination.totalPages);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, page, limit]);
 
   const deleteConfirm = async () => {
     setLoading(true);
@@ -72,6 +78,11 @@ const App = () => {
         tasks={tasks}
         loading={loading}
         onLogout={logout}
+        pagination={{
+          page,
+          totalPages,
+          onPageChange: (newPage: number) => setPage(newPage),
+        }}
         onExportRequest={async () => {
           console.log("Exporting...");
           setLoading(true);
@@ -154,7 +165,7 @@ const App = () => {
             alert(res?.message);
             const updatedTasks = await fetchTasks(token as string);
 
-            setTasks(updatedTasks?.data as Task[]);
+            setTasks(updatedTasks?.data?.tasks as Task[]);
           } catch (error) {
             console.log(error);
             alert("Bulk submit failed. Please try again later");
