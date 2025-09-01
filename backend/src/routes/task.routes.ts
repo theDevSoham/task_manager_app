@@ -226,6 +226,16 @@ router.get(
       const tasks = await prisma.task.findMany({
         where: { userId: req.user!.id },
         orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          effortDays: true,
+          dueDate: true, // keep
+          // userId: false, // omit
+          // createdAt: false, // omit
+          // updatedAt: false, // omit
+        },
       });
 
       const worksheet = XLSX.utils.json_to_sheet(tasks);

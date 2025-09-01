@@ -19,13 +19,16 @@ import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import type { Task } from "@/types/types";
 import TaskModal from "./TaskModal";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TaskTableProps {
   tasks: Task[];
   loading?: boolean;
   onLogout?: () => void;
   onTaskSubmit?: (task: Partial<Task>, mode: "add" | "edit") => void;
+  onBulkTaskSubmit?: (file: File) => void;
   onDeleteTask?: (taskId: number) => void;
+  onExportRequest?: () => void;
 }
 
 export const TaskTable = ({
@@ -33,14 +36,24 @@ export const TaskTable = ({
   loading = false,
   onLogout,
   onTaskSubmit,
+  onBulkTaskSubmit,
   onDeleteTask,
+  onExportRequest,
 }: TaskTableProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
+  const [modalMode, setModalMode] = useState<"add" | "edit" | "bulk">("add");
   const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
+
+  const { user } = useAuth();
 
   const handleAdd = () => {
     setModalMode("add");
+    setSelectedTask(undefined);
+    setIsModalOpen(true);
+  };
+
+  const handleBulkAdd = () => {
+    setModalMode("bulk");
     setSelectedTask(undefined);
     setIsModalOpen(true);
   };
@@ -55,7 +68,11 @@ export const TaskTable = ({
     onDeleteTask?.(taskId);
   };
 
-  const onExportCSV = () => {};
+  const onExportCSV = () => {
+    if (onExportRequest) {
+      onExportRequest();
+    }
+  };
 
   return (
     <>
@@ -63,7 +80,9 @@ export const TaskTable = ({
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">Welcome back!</h1>
+            <h1 className="text-2xl font-bold">
+              Welcome back, {user?.firstName}!
+            </h1>
             <p className="text-muted-foreground">
               Here's a list of tasks you created.
             </p>
@@ -104,6 +123,9 @@ export const TaskTable = ({
           <div className="flex gap-2">
             <Button onClick={handleAdd} size="sm">
               <Plus className="h-4 w-4 mr-1" /> Add Task
+            </Button>
+            <Button onClick={handleBulkAdd} size="sm">
+              <Plus className="h-4 w-4 mr-1" /> Add Bulk Task
             </Button>
           </div>
         </div>
@@ -190,17 +212,33 @@ export const TaskTable = ({
         )}
       </div>
 
-      {/* Task Modal */}
-      <TaskModal
-        isOpen={isModalOpen}
-        mode={modalMode}
-        initialData={selectedTask}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={(task) => {
-          onTaskSubmit?.(task, modalMode);
-          setIsModalOpen(false);
-        }}
-      />
+      {/* Add/Edit Task Modal */}
+      {(modalMode === "add" || modalMode === "edit") && (
+        <TaskModal
+          isOpen={isModalOpen}
+          mode={modalMode} // ✅ narrowed to "add" | "edit"
+          initialData={selectedTask}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={(task) => {
+            onTaskSubmit?.(task, modalMode);
+            setIsModalOpen(false);
+          }}
+        />
+      )}
+
+      {/* Bulk Upload Modal */}
+      {modalMode === "bulk" && (
+        <TaskModal
+          isOpen={isModalOpen}
+          mode="bulk" // ✅ narrowed to "bulk"
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={(file) => {
+            // file is File
+            onBulkTaskSubmit?.(file);
+            setIsModalOpen(false);
+          }}
+        />
+      )}
     </>
   );
 };

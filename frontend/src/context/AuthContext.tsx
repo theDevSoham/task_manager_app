@@ -1,7 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
-  useContext,
   useEffect,
   useState,
   type ReactNode,
@@ -53,12 +52,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
 }

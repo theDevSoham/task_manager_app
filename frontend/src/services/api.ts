@@ -66,3 +66,41 @@ export async function deleteTask(token: string, taskId: string) {
     })
   ).data;
 }
+
+/**
+ * Bulk upload tasks using a file (CSV or Excel).
+ */
+export async function addBulk(token: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return (
+    await axios.post(`${API_BASE_URL}/tasks/add/bulk`, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    })
+  ).data;
+}
+
+/**
+ * Export tasks as Excel (downloads the file).
+ */
+export async function exportCSV(token: string) {
+  const response = await axiosClient.get(`/export/excel`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    responseType: "blob", // get binary data
+  });
+
+  // Create a blob link to download
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", "tasks.xlsx");
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}

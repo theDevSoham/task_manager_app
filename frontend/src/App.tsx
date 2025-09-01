@@ -2,7 +2,14 @@ import { useState, useEffect } from "react";
 import { AuthModal } from "@/components/AuthModal";
 import { TaskTable } from "@/components/TaskTable";
 import { useAuth } from "@/hooks/useAuth";
-import { addTask, deleteTask, editTask, fetchTasks } from "@/services/api";
+import {
+  addBulk,
+  addTask,
+  deleteTask,
+  editTask,
+  exportCSV,
+  fetchTasks,
+} from "@/services/api";
 import type { Task } from "./types/types";
 import { AlertModal } from "./components/AlertModal";
 
@@ -65,6 +72,18 @@ const App = () => {
         tasks={tasks}
         loading={loading}
         onLogout={logout}
+        onExportRequest={async () => {
+          console.log("Exporting...");
+          setLoading(true);
+          try {
+            await exportCSV(token as string);
+          } catch (error) {
+            console.log(error);
+            alert("Failed to upload data");
+          } finally {
+            setLoading(false);
+          }
+        }}
         onTaskSubmit={async (task, mode) => {
           setLoading(true);
           switch (mode) {
@@ -121,6 +140,26 @@ const App = () => {
 
             default:
               break;
+          }
+        }}
+        onBulkTaskSubmit={async (file) => {
+          setLoading(true);
+          try {
+            const res = await addBulk(token as string, file);
+
+            if (!res?.success) {
+              return alert("Failed to upload data: " + res?.message);
+            }
+
+            alert(res?.message);
+            const updatedTasks = await fetchTasks(token as string);
+
+            setTasks(updatedTasks?.data as Task[]);
+          } catch (error) {
+            console.log(error);
+            alert("Bulk submit failed. Please try again later");
+          } finally {
+            setLoading(false);
           }
         }}
         onDeleteTask={async (taskId: number) => {
