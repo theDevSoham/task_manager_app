@@ -8,6 +8,8 @@ import { sendMail } from "../utils/mail";
 import { CustomRequest } from "../utils/types/customRequest";
 import { sanitize } from "../utils/sanitize";
 import { msToHuman } from "../utils/msToHuman";
+import { validateGoogleToken } from "../utils/veriify_sso_token";
+import { generateHashedPassword } from "../utils/generateRandomPass";
 
 // Rate limiter: store timestamps of requests per email
 const otpRateLimiter = new Map<string, number[]>();
@@ -37,6 +39,15 @@ const otpSchema = z.object({
 // resend otp schema
 const resendOtpSchema = z.object({
   email: z.email("Invalid email format"),
+});
+
+// sso login schema
+const ssoSchema = z.object({
+  email: z.email(),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  login_mode: z.enum(["google", "facebook"]),
+  sso_token: z.string().min(1),
 });
 
 const router = Router();
@@ -330,6 +341,67 @@ router.post("/login", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Login error:", err);
     return sendResponse(res, 500, false, "Login failed");
+  }
+});
+
+router.post("/login/sso", async (req: Request, res: Response) => {
+  try {
+    const parsed = ssoSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const errors = parsed.error.issues.map((e) => ({
+        field: e.path[0],
+        message: e.message,
+      }));
+      return sendResponse(res, 400, false, "Invalid input", errors);
+    }
+
+    const { email, firstName, lastName, login_mode, sso_token } = parsed.data;
+
+    let ssoData: any = null;
+
+    // Verify SSO token
+    switch (login_mode) {
+      case "google":
+        ssoData = await validateGoogleToken(sso_token);
+        break;
+
+      case "facebook":
+        // ssoData = await validateGoogleToken(sso_token);
+        break;
+
+      default:
+        return sendResponse(res, 400, false, "Invalid login mode");
+    }
+
+    if (!ssoData) {
+      return sendResponse(res, 401, false, "Invalid SSO token");
+    }
+
+    // Check if user exists
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      // Create verified user
+      user = await prisma.user.create({
+        data: {
+          email,
+          firstName,
+          lastName,
+          password: (await generateHashedPassword()).hashedPassword,
+          verified: true,
+        },
+      });
+    }
+
+    const loginToken = generateToken(user.id.toString(), "login");
+
+    return sendResponse(res, 200, true, "Login successful", {
+      accessToken: loginToken,
+      user: sanitize(user, "User"),
+    });
+  } catch (err) {
+    console.error("SSO login error:", err);
+    return sendResponse(res, 500, false, "SSO login failed");
   }
 });
 
