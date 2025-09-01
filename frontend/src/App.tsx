@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import { AuthModal } from "@/components/AuthModal";
-import { TaskTable } from "@/components/TaskTable";
+import { TaskTable, type TaskTableRef } from "@/components/TaskTable";
 import { useAuth } from "@/hooks/useAuth";
 import {
   addBulk,
@@ -8,40 +8,23 @@ import {
   deleteTask,
   editTask,
   exportCSV,
-  fetchTasks,
 } from "@/services/api";
-import type { Task } from "./types/types";
 import { AlertModal } from "./components/AlertModal";
 
 const App = () => {
   const { user, token, login, logout } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(!user);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(false);
   const [deleteSignature, setDeleteSignature] = useState({
     openModal: false,
     taskId: "",
   });
+  const taskTableRef = useRef<TaskTableRef>(null);
 
-  // pagination state
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-
-  useEffect(() => {
-    if (!token) return;
-    setLoading(true);
-    fetchTasks(token)
-      .then((res) => {
-        setTasks(res.data.tasks as Task[]);
-        setTotalPages(res.data.pagination.totalPages);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [token, page, limit]);
+  const handleReloadTasks = () => {
+    taskTableRef.current?.loadTasks(); // triggers loadTasks in child
+  };
 
   const deleteConfirm = async () => {
-    setLoading(true);
     try {
       const res = await deleteTask(token as string, deleteSignature.taskId);
       if (!res?.success) {
@@ -49,13 +32,11 @@ const App = () => {
       }
 
       alert(res?.message);
-      setTasks((prev) => prev.filter((item) => item.id !== res?.data?.id));
       setDeleteSignature({ openModal: false, taskId: "" });
+      handleReloadTasks();
     } catch (error) {
       console.error(error);
       alert("Problem happened on server side. Please try again");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -75,28 +56,17 @@ const App = () => {
   return (
     <>
       <TaskTable
-        tasks={tasks}
-        loading={loading}
         onLogout={logout}
-        pagination={{
-          page,
-          totalPages,
-          onPageChange: (newPage: number) => setPage(newPage),
-        }}
         onExportRequest={async () => {
           console.log("Exporting...");
-          setLoading(true);
           try {
             await exportCSV(token as string);
           } catch (error) {
             console.log(error);
             alert("Failed to upload data");
-          } finally {
-            setLoading(false);
           }
         }}
         onTaskSubmit={async (task, mode) => {
-          setLoading(true);
           switch (mode) {
             case "add": {
               try {
@@ -112,12 +82,10 @@ const App = () => {
                 }
 
                 alert(res?.message);
-                setTasks((prev) => [res.data, ...prev]);
+                handleReloadTasks();
               } catch (error) {
                 console.log(error);
                 alert("Problem happened on server side. Please try again");
-              } finally {
-                setLoading(false);
               }
               break;
             }
@@ -135,16 +103,10 @@ const App = () => {
                 }
 
                 alert(res?.message);
-                setTasks((prev) =>
-                  prev.map((item) =>
-                    item.id === res.data.id ? res.data : item
-                  )
-                );
+                handleReloadTasks();
               } catch (error) {
                 console.log(error);
                 alert("Problem happened on server side. Please try again");
-              } finally {
-                setLoading(false);
               }
               break;
             }
@@ -154,7 +116,6 @@ const App = () => {
           }
         }}
         onBulkTaskSubmit={async (file) => {
-          setLoading(true);
           try {
             const res = await addBulk(token as string, file);
 
@@ -163,14 +124,10 @@ const App = () => {
             }
 
             alert(res?.message);
-            const updatedTasks = await fetchTasks(token as string);
-
-            setTasks(updatedTasks?.data?.tasks as Task[]);
+            handleReloadTasks();
           } catch (error) {
             console.log(error);
             alert("Bulk submit failed. Please try again later");
-          } finally {
-            setLoading(false);
           }
         }}
         onDeleteTask={async (taskId: number) => {
