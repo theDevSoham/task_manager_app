@@ -2,26 +2,48 @@ import { useState, useEffect } from "react";
 import { AuthModal } from "@/components/AuthModal";
 import { TaskTable } from "@/components/TaskTable";
 import { useAuth } from "@/hooks/useAuth";
-import { fetchTasks } from "@/services/api";
-import { Button } from "@/components/ui/button";
+import { addTask, deleteTask, editTask, fetchTasks } from "@/services/api";
 import type { Task } from "./types/types";
+import { AlertModal } from "./components/AlertModal";
 
 const App = () => {
   const { user, token, login, logout } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(!user);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [selected, setSelected] = useState<number[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [deleteSignature, setDeleteSignature] = useState({
+    openModal: false,
+    taskId: "",
+  });
 
   useEffect(() => {
-    console.log("Token: ", token);
     if (!token) return;
-    fetchTasks(token).then((res) => setTasks(res.data.tasks));
+    setLoading(true);
+    fetchTasks(token)
+      .then((res) => {
+        setTasks(res.data as Task[]);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [token]);
 
-  const handleSelect = (id: number) => {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+  const deleteConfirm = async () => {
+    setLoading(true);
+    try {
+      const res = await deleteTask(token as string, deleteSignature.taskId);
+      if (!res?.success) {
+        return alert("Failed to delete task: " + res?.message);
+      }
+
+      alert(res?.message);
+      setTasks((prev) => prev.filter((item) => item.id !== res?.data?.id));
+      setDeleteSignature({ openModal: false, taskId: "" });
+    } catch (error) {
+      console.error(error);
+      alert("Problem happened on server side. Please try again");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!user) {
@@ -30,8 +52,7 @@ const App = () => {
         open={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onLoginSuccess={(currUser, currToken) => {
-          console.log("User: ", currUser);
-          login(currUser, currToken);
+          login(currToken, currUser);
           setShowAuthModal(false);
         }}
       />
@@ -39,15 +60,91 @@ const App = () => {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between mb-4">
-        <h1>My Tasks</h1>
-        <Button onClick={logout}>Logout</Button>
-      </div>
-      {!showAuthModal && (
-        <TaskTable tasks={tasks} selected={selected} onSelect={handleSelect} />
-      )}
-    </div>
+    <>
+      <TaskTable
+        tasks={tasks}
+        loading={loading}
+        onLogout={logout}
+        onTaskSubmit={async (task, mode) => {
+          setLoading(true);
+          switch (mode) {
+            case "add": {
+              try {
+                const res = await addTask(token as string, {
+                  title: task.title as string,
+                  description: task.description as string,
+                  effortDays: task.effortDays as number,
+                  dueDate: task.dueDate as string,
+                });
+
+                if (!res?.success) {
+                  return alert("Failed to add task: " + res?.message);
+                }
+
+                alert(res?.message);
+                setTasks((prev) => [res.data, ...prev]);
+              } catch (error) {
+                console.log(error);
+                alert("Problem happened on server side. Please try again");
+              } finally {
+                setLoading(false);
+              }
+              break;
+            }
+
+            case "edit": {
+              try {
+                const res = await editTask(
+                  token as string,
+                  (task.id as number)?.toString(),
+                  task
+                );
+
+                if (!res?.success) {
+                  return alert("Failed to add task: " + res?.message);
+                }
+
+                alert(res?.message);
+                setTasks((prev) =>
+                  prev.map((item) =>
+                    item.id === res.data.id ? res.data : item
+                  )
+                );
+              } catch (error) {
+                console.log(error);
+                alert("Problem happened on server side. Please try again");
+              } finally {
+                setLoading(false);
+              }
+              break;
+            }
+
+            default:
+              break;
+          }
+        }}
+        onDeleteTask={async (taskId: number) => {
+          setDeleteSignature({
+            openModal: true,
+            taskId: taskId.toString(),
+          });
+        }}
+      />
+
+      <AlertModal
+        open={deleteSignature.openModal}
+        onOpenChange={(open) =>
+          setDeleteSignature((prev) => ({ ...prev, openModal: open }))
+        }
+        title="Delete Task?"
+        description="This action cannot be undone. Are you sure you want to delete this task?"
+        okText="Delete"
+        cancelText="Cancel"
+        onOk={deleteConfirm}
+        onCancel={() => setDeleteSignature({ openModal: false, taskId: "" })}
+        closable={false}
+      />
+    </>
   );
 };
 

@@ -14,7 +14,6 @@ import {
   verifyOtp,
 } from "@/services/auth";
 import type { User } from "@/types/types";
-import { cn } from "@/lib/utils";
 import { DialogTitle } from "@radix-ui/react-dialog";
 
 interface AuthModalProps {
@@ -133,12 +132,7 @@ export const AuthModal = ({
         onPointerDownOutside={(e) => e.preventDefault()}
         showCloseButton={false}
       >
-        <DialogTitle
-          className={cn(
-            "text-xl font-semibold",
-            "text-gray-900 dark:text-gray-100"
-          )}
-        >
+        <DialogTitle>
           {step === "login" && "Welcome Back 👋"}
           {step === "signup" && "Create Your Account"}
           {step === "otp" && "Verify Your Email"}
@@ -209,7 +203,7 @@ export const AuthModal = ({
               <Button onClick={handleLogin} disabled={loading}>
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
-              <p className="text-sm text-muted-foreground text-center">
+              <p className="text-sm text-center">
                 Don’t have an account?{" "}
                 <Button onClick={() => setStep("signup")}>Sign up</Button>
               </p>
@@ -221,7 +215,7 @@ export const AuthModal = ({
               <Button onClick={handleSignup} disabled={loading}>
                 {loading ? "Signing up..." : "Sign Up"}
               </Button>
-              <p className="text-sm text-muted-foreground text-center">
+              <p className="text-sm text-center">
                 Already have an account?{" "}
                 <Button onClick={() => setStep("login")}>Log in</Button>
               </p>
@@ -233,7 +227,7 @@ export const AuthModal = ({
               <Button onClick={handleVerifyOtp} disabled={loading}>
                 {loading ? "Verifying..." : "Verify OTP"}
               </Button>
-              <p className="text-sm text-muted-foreground text-center">
+              <p className="text-sm text-center">
                 Didn’t get the code?{" "}
                 <Button onClick={handleResend} disabled={loading}>
                   Resend

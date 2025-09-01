@@ -171,28 +171,21 @@ router.patch(
 
       // No userId here, we never update userId
 
-      const task = await prisma.task.updateMany({
+      const task = await prisma.task.update({
         where: { id, userId: req.user!.id },
         data: updateData,
       });
 
-      if (task.count === 0) {
-        return sendResponse(
-          res,
-          404,
-          false,
-          "Task not found or no changes made"
-        );
+      return sendResponse(res, 200, true, "Task updated successfully", task);
+    } catch (err: any) {
+      if (err.code === "P2025") {
+        return sendResponse(res, 404, false, "Task not found");
       }
-
-      return sendResponse(res, 200, true, "Task updated successfully");
-    } catch (err) {
       console.error("Edit task error:", err);
       return sendResponse(res, 500, false, "Internal server error");
     }
   }
 );
-
 // Delete task
 router.delete(
   "/task/delete/:id",
@@ -201,16 +194,23 @@ router.delete(
     try {
       const id = Number(req.params.id);
 
-      const task = await prisma.task.deleteMany({
+      const task = await prisma.task.findFirst({
         where: { id, userId: req.user!.id },
       });
 
-      if (task.count === 0) {
+      if (!task) {
         return sendResponse(res, 404, false, "Task not found");
       }
 
-      return sendResponse(res, 200, true, "Task deleted successfully");
-    } catch (err) {
+      await prisma.task.delete({
+        where: { id: task.id },
+      });
+
+      return sendResponse(res, 200, true, "Task deleted successfully", task);
+    } catch (err: any) {
+      if (err.code === "P2025") {
+        return sendResponse(res, 404, false, "Task not found");
+      }
       console.error("Delete task error:", err);
       return sendResponse(res, 500, false, "Internal server error");
     }
