@@ -2,6 +2,9 @@
 
 A full-stack task management application built with **React/Next.js** for the frontend and **Node.js/Express** for the backend. The app provides user authentication, task creation, editing, bulk upload, search with server-side filtering, pagination, and CSV export functionality.
 
+## Hosted Application
+Checkout the application at [this](https://task-manager-app-rho-blush.vercel.app/) link. Also the backend can be tested via this [postman document](https://documenter.getpostman.com/view/24589212/2sB3Hhu3bW)
+
 ---
 
 ## Table of Contents
