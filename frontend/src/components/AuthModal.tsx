@@ -68,7 +68,18 @@ export const AuthModal = ({
     } catch (err: any) {
       if (err.response?.data?.requiresOtp) {
         setStep("login");
+        setAlert({
+          open: true,
+          title: "Error",
+          desc: "OTP not verified",
+        });
+        return;
       }
+      setAlert({
+        open: true,
+        title: "Error",
+        desc: err?.message || "Invalid username or password",
+      });
     } finally {
       setLoading(false);
     }
@@ -152,6 +163,11 @@ export const AuthModal = ({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       console.log(e);
+      setAlert({
+        open: true,
+        title: "Error",
+        desc: e?.message || "OTP verification failure",
+      });
     } finally {
       setLoading(false);
     }
