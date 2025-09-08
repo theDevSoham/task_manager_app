@@ -294,7 +294,6 @@ export const AuthModal = ({
         onOpenChange={(open) => setAlert((prev) => ({ ...prev, open }))}
         title={alert.title}
         description={alert.desc}
-        closable={false}
       />
     </>
   );
